@@ -28,16 +28,30 @@ class FFmpegGUI:
         self.output_button = tk.Button(root, text="浏览", command=self.browse_output)
         self.output_button.grid(row=1, column=2, padx=5, pady=5)
         
+        # 编码器选项
+        self.encoder_label = tk.Label(root, text="选择编码器:")
+        self.encoder_label.grid(row=2, column=0, padx=5, pady=5, sticky='e')
+        self.encoder_var = tk.StringVar(value='av1_nvenc')
+        self.encoder_option = ttk.Combobox(root, textvariable=self.encoder_var, values=['av1_nvenc', 'h264_nvenc', 'hevc_nvenc'])
+        self.encoder_option.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+        
         # CQ 值
-        self.cq_label = tk.Label(root, text="CQ (Constant Quality):")
-        self.cq_label.grid(row=2, column=0, padx=5, pady=5, sticky='e')
+        self.cq_label = tk.Label(root, text="CQ (恒定质量):")
+        self.cq_label.grid(row=3, column=0, padx=5, pady=5, sticky='e')
         self.cq_entry = tk.Entry(root, width=10)
         self.cq_entry.insert(0, "20")
-        self.cq_entry.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+        self.cq_entry.grid(row=3, column=1, padx=5, pady=5, sticky='w')
+        
+        # 封装格式选项
+        self.container_label = tk.Label(root, text="选择封装格式:")
+        self.container_label.grid(row=4, column=0, padx=5, pady=5, sticky='e')
+        self.container_var = tk.StringVar(value='mp4')
+        self.container_option = ttk.Combobox(root, textvariable=self.container_var, values=['mp4', 'mov', 'mkv', 'flv'])
+        self.container_option.grid(row=4, column=1, padx=5, pady=5, sticky='w')
         
         # 开始和取消按钮
         self.button_frame = tk.Frame(root)
-        self.button_frame.grid(row=3, column=0, columnspan=3, pady=5)
+        self.button_frame.grid(row=5, column=0, columnspan=3, pady=5)
         self.start_button = tk.Button(self.button_frame, text="开始", command=self.start_encoding)
         self.start_button.pack(side='left', padx=5)
         self.cancel_button = tk.Button(self.button_frame, text="取消", command=self.cancel_encoding, state='disabled')
@@ -45,15 +59,15 @@ class FFmpegGUI:
         
         # 进度条
         self.progress = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
-        self.progress.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+        self.progress.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
         
         # 预计剩余时间
         self.time_label = tk.Label(root, text="预计剩余时间: N/A")
-        self.time_label.grid(row=5, column=0, columnspan=3, padx=5, pady=5)
+        self.time_label.grid(row=7, column=0, columnspan=3, padx=5, pady=5)
         
         # 状态标签
         self.status_label = tk.Label(root, text="状态: 空闲")
-        self.status_label.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
+        self.status_label.grid(row=8, column=0, columnspan=3, padx=5, pady=5)
         
         # 初始化变量
         self.duration = 0
@@ -71,7 +85,9 @@ class FFmpegGUI:
             print(f"Duration: {self.duration} seconds")
         
     def browse_output(self):
-        filename = filedialog.asksaveasfilename(defaultextension=".mp4")
+        # 根据选择的封装格式设置默认扩展名
+        default_ext = '.' + self.container_var.get()
+        filename = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=[(self.container_var.get().upper(), f"*{default_ext}")])
         if filename:
             self.output_entry.delete(0, tk.END)
             self.output_entry.insert(0, filename)
@@ -93,6 +109,8 @@ class FFmpegGUI:
         input_file = self.input_entry.get()
         output_file = self.output_entry.get()
         cq_value = self.cq_entry.get()
+        encoder = self.encoder_var.get()
+        container = self.container_var.get()
         
         if not os.path.isfile(input_file):
             self.status_label.config(text="状态: 输入文件无效")
@@ -123,7 +141,7 @@ class FFmpegGUI:
             'ffmpeg',
             '-y',  # 自动覆盖已存在的文件
             '-i', input_file,
-            '-c:v', 'av1_nvenc',
+            '-c:v', encoder,
             '-preset', 'p7',
             '-rc', 'constqp',
             '-cq', cq_value,
@@ -132,6 +150,7 @@ class FFmpegGUI:
             '-spatial_aq', '1',
             '-temporal_aq', '1',
             '-c:a', 'copy',
+            '-f', container,
             output_file
         ]
         
