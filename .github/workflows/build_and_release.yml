@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'  # 当推送的标签符合 v* 格式时触发，例如 v1.0
 
+permissions:
+    contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
