@@ -13,13 +13,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-latest, windows-latest]
         os: [windows-latest]
         include:
-        #   - os: ubuntu-latest
-        #     artifact_name: ffmpeg_gui_linux
-        #     pyinstaller_os: Linux
-        #     executable_name: ffmpeg_gui_linux
           - os: windows-latest
             artifact_name: VideoSlimmer
             pyinstaller_os: Windows
@@ -37,10 +32,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
-
-      - name: Install ffmpeg (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y ffmpeg
 
       - name: Install ffmpeg (Windows)
         if: matrix.os == 'windows-latest'
@@ -74,20 +65,11 @@ jobs:
           path: .
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          artifacts: "VideoSlimmer.exe"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: VideoSlimmer.exe
-          asset_name: VideoSlimmer.exe
-          asset_content_type: application/octet-stream
-          token: ${{ secrets.GITHUB_TOKEN }}
