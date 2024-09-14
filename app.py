@@ -48,6 +48,7 @@ class FFmpegGUI:
         self.container_var = tk.StringVar(value='mp4')
         self.container_option = ttk.Combobox(root, textvariable=self.container_var, values=['mp4', 'mov', 'mkv', 'flv'])
         self.container_option.grid(row=4, column=1, padx=5, pady=5, sticky='w')
+        self.container_option.bind("<<ComboboxSelected>>", self.update_output_extension)
         
         # 开始和取消按钮
         self.button_frame = tk.Frame(root)
@@ -69,6 +70,10 @@ class FFmpegGUI:
         self.status_label = tk.Label(root, text="状态: 空闲")
         self.status_label.grid(row=8, column=0, columnspan=3, padx=5, pady=5)
         
+        # 环境检查按钮
+        self.check_env_button = tk.Button(root, text="环境检查", command=self.check_environment)
+        self.check_env_button.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
+        
         # 初始化变量
         self.duration = 0
         self.is_running = False
@@ -85,12 +90,30 @@ class FFmpegGUI:
             print(f"Duration: {self.duration} seconds")
         
     def browse_output(self):
-        # 根据选择的封装格式设置默认扩展名
-        default_ext = '.' + self.container_var.get()
-        filename = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=[(self.container_var.get().upper(), f"*{default_ext}")])
+        # 获取当前选择的封装格式
+        container = self.container_var.get()
+        default_ext = '.' + container
+        # 定义所有支持的文件类型
+        filetypes = [('MP4 文件', '*.mp4'), ('MOV 文件', '*.mov'), ('MKV 文件', '*.mkv'), ('FLV 文件', '*.flv'), ('所有文件', '*.*')]
+        # 设置默认文件类型
+        filename = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=filetypes)
         if filename:
+            # 如果用户没有手动添加扩展名，确保输出文件名有正确的扩展名
+            if not os.path.splitext(filename)[1]:
+                filename += default_ext
             self.output_entry.delete(0, tk.END)
             self.output_entry.insert(0, filename)
+    
+    def update_output_extension(self, event=None):
+        # 当封装格式改变时，更新输出文件的扩展名
+        output_path = self.output_entry.get()
+        if output_path:
+            base, ext = os.path.splitext(output_path)
+            new_ext = '.' + self.container_var.get()
+            if ext != new_ext:
+                new_output_path = base + new_ext
+                self.output_entry.delete(0, tk.END)
+                self.output_entry.insert(0, new_output_path)
     
     def get_duration(self, filename):
         try:
@@ -211,6 +234,60 @@ class FFmpegGUI:
             self.time_label.config(text="预计剩余时间: N/A")
         self.cancel_button.config(state='disabled')
         self.start_button.config(state='normal')
+    
+    def check_environment(self):
+        # 检查 ffmpeg 是否可用
+        ffmpeg_available = False
+        try:
+            subprocess.run(['ffmpeg', '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            ffmpeg_available = True
+        except Exception:
+            ffmpeg_available = False
+        
+        # 检查是否存在 NVIDIA 显卡
+        nvidia_gpu_available = False
+        try:
+            result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
+            if "NVIDIA-SMI" in result.stdout:
+                nvidia_gpu_available = True
+        except Exception:
+            nvidia_gpu_available = False
+        
+        # 创建新的窗口显示结果
+        env_window = tk.Toplevel(self.root)
+        env_window.title("环境检查结果")
+        
+        # 使用 Unicode 字符显示对号和叉号
+        check_mark = '\u2714'  # ✔
+        cross_mark = '\u2718'  # ✘
+        
+        # ffmpeg 检查结果
+        ffmpeg_label = tk.Label(env_window, text="ffmpeg 可用性：")
+        ffmpeg_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+        ffmpeg_result = tk.Label(env_window, text=check_mark if ffmpeg_available else cross_mark, fg='green' if ffmpeg_available else 'red')
+        ffmpeg_result.grid(row=0, column=1, padx=5, pady=5, sticky='w')
+        
+        # NVIDIA 显卡检查结果
+        nvidia_label = tk.Label(env_window, text="NVIDIA 显卡：")
+        nvidia_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
+        nvidia_result = tk.Label(env_window, text=check_mark if nvidia_gpu_available else cross_mark, fg='green' if nvidia_gpu_available else 'red')
+        nvidia_result.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+        
+        # 提示信息
+        info_text = ""
+        if not ffmpeg_available:
+            info_text += "未找到 ffmpeg。请安装 ffmpeg 并将其添加到系统环境变量。\n"
+        if not nvidia_gpu_available:
+            info_text += "未检测到 NVIDIA 显卡。请确保已安装 NVIDIA 显卡和正确的驱动程序。\n"
+        if info_text == "":
+            info_text = "您的环境已正确配置。"
+        info_label = tk.Label(env_window, text=info_text)
+        info_label.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
+        
+        # 关闭按钮
+        close_button = tk.Button(env_window, text="关闭", command=env_window.destroy)
+        close_button.grid(row=3, column=0, columnspan=2, pady=5)
+        
 
 if __name__ == '__main__':
     root = tk.Tk()

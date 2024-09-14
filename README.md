@@ -43,7 +43,7 @@ python app.py
 * 点击“开始”按钮开始压缩。
 * 在压缩过程中，可以查看进度和预计剩余时间，如有需要可点击“取消”按钮中止压缩。
 ## 截图
-![alt text](img/image.png)
+![png](img/image.png)
 
 # 重要说明
 * **NVIDIA 显卡要求**：本软件利用 FFmpeg 的 av1_nvenc 编码器进行视频压缩，该编码器需要 NVIDIA 显卡的支持。为获得最佳性能，请确保您的计算机配备支持硬件编码的 NVIDIA 显卡。
