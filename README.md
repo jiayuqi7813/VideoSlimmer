@@ -52,7 +52,9 @@ python app.py
 
 # 贡献
 欢迎提出问题（Issues）和请求（Pull Requests）来改进本项目。
-
+# 鸣谢
+* [FFmpeg](https://ffmpeg.org/)
+* [Tryanks](https://github.com/Tryanks) 提供ffmpeg指令
 # 许可证
 MIT License
 

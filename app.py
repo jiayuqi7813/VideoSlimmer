@@ -287,7 +287,7 @@ class FFmpegGUI:
         # 关闭按钮
         close_button = tk.Button(env_window, text="关闭", command=env_window.destroy)
         close_button.grid(row=3, column=0, columnspan=2, pady=5)
-        
+
 
 if __name__ == '__main__':
     root = tk.Tk()
