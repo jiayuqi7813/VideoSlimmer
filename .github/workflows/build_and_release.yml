@@ -23,7 +23,7 @@ jobs:
           - os: windows-latest
             artifact_name: ffmpeg_gui_windows
             pyinstaller_os: Windows
-            executable_name: ffmpeg_gui_windows.exe
+            executable_name: VideoSlimmer.exe
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -96,16 +96,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ffmpeg_gui_windows.exe
-          asset_name: ffmpeg_gui_windows.exe
+          asset_path: VideoSlimmer.exe
+          asset_name: VideoSlimmer.exe
           asset_content_type: application/octet-stream
 
-      - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ffmpeg_gui_linux
-          asset_name: ffmpeg_gui_linux
-          asset_content_type: application/octet-stream
+    #   - name: Upload Linux Release Asset
+    #     uses: actions/upload-release-asset@v1
+    #     env:
+    #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #     with:
+    #       upload_url: ${{ steps.create_release.outputs.upload_url }}
+    #       asset_path: ffmpeg_gui_linux
+    #       asset_name: ffmpeg_gui_linux
+    #       asset_content_type: application/octet-stream
