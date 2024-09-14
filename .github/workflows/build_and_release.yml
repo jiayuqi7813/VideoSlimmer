@@ -6,7 +6,7 @@ on:
       - 'v*'  # 当推送的标签符合 v* 格式时触发，例如 v1.0
 
 permissions:
-    contents: write
+  contents: write  # 为 GITHUB_TOKEN 设置 contents 的写权限
 
 jobs:
   build:
@@ -19,9 +19,11 @@ jobs:
         #   - os: ubuntu-latest
         #     artifact_name: ffmpeg_gui_linux
         #     pyinstaller_os: Linux
+        #     executable_name: ffmpeg_gui_linux
           - os: windows-latest
             artifact_name: ffmpeg_gui_windows
             pyinstaller_os: Windows
+            executable_name: ffmpeg_gui_windows.exe
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -36,6 +38,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
 
+      - name: Install ffmpeg (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install ffmpeg (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install ffmpeg -y
+
       - name: Build executable with PyInstaller
         run: |
           pyinstaller app.py --onefile --name ${{ matrix.artifact_name }}
@@ -47,31 +61,51 @@ jobs:
           path: dist/${{ matrix.artifact_name }}${{ matrix.pyinstaller_os == 'Windows' && '.exe' || '' }}
 
   release:
-        needs: build
-        runs-on: ubuntu-latest
-        steps:
-            - name: Download artifacts
-              uses: actions/download-artifact@v3
-              with:
-                path: artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
 
-            - name: Create Release
-              id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ github.ref }}
-                  release_name: Release ${{ github.ref }}
-                  draft: false
-                  prerelease: false
-        
-            - name: Upload Release Assets
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: artifacts/*
-                  asset_name: $(basename ${{ github.event.head_commit.message }})
-                  asset_content_type: application/octet-stream
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ffmpeg_gui_windows
+          path: .
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ffmpeg_gui_linux
+          path: .
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ffmpeg_gui_windows.exe
+          asset_name: ffmpeg_gui_windows.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ffmpeg_gui_linux
+          asset_name: ffmpeg_gui_linux
+          asset_content_type: application/octet-stream
