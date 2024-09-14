@@ -21,7 +21,7 @@ jobs:
         #     pyinstaller_os: Linux
         #     executable_name: ffmpeg_gui_linux
           - os: windows-latest
-            artifact_name: ffmpeg_gui_windows
+            artifact_name: VideoSlimmer
             pyinstaller_os: Windows
             executable_name: VideoSlimmer.exe
     steps:
@@ -70,14 +70,14 @@ jobs:
       - name: Download Windows artifact
         uses: actions/download-artifact@v3
         with:
-          name: ffmpeg_gui_windows
+          name: VideoSlimmer
           path: .
 
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ffmpeg_gui_linux
-          path: .
+    #   - name: Download Linux artifact
+    #     uses: actions/download-artifact@v3
+    #     with:
+    #       name: ffmpeg_gui_linux
+    #       path: .
 
       - name: Create Release
         id: create_release
