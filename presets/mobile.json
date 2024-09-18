@@ -1,0 +1,11 @@
+{
+    "preset_name": "移动设备",
+    "video_encoder": "h264_nvenc",
+    "cq_value": "28",
+    "container": "mp4",
+    "audio_encoder": "aac",
+    "audio_bitrate": "128",
+    "audio_sample_rate": "44100",
+    "audio_channels": "2",
+    "keep_subtitles": false
+}

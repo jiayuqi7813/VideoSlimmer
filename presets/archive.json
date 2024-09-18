@@ -1,0 +1,8 @@
+{
+    "preset_name": "高质量存档",
+    "video_encoder": "hevc_nvenc",
+    "cq_value": "18",
+    "container": "mkv",
+    "audio_encoder": "copy",
+    "keep_subtitles": true
+}

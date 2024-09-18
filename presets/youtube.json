@@ -1,0 +1,11 @@
+{
+    "preset_name": "YouTube 上传",
+    "video_encoder": "h264_nvenc",
+    "cq_value": "23",
+    "container": "mp4",
+    "audio_encoder": "aac",
+    "audio_bitrate": "192",
+    "audio_sample_rate": "48000",
+    "audio_channels": "2",
+    "keep_subtitles": false
+}
