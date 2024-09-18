@@ -24,8 +24,8 @@ class FFmpegGUI:
         self.input_button = tk.Button(root, text="浏览", command=self.browse_input)
         self.input_button.grid(row=0, column=2, padx=5, pady=5)
         
-        # 输出文件
-        self.output_label = tk.Label(root, text="输出文件:")
+        # 输出目录
+        self.output_label = tk.Label(root, text="输出目录:")
         self.output_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
         self.output_entry = tk.Entry(root, width=50)
         self.output_entry.grid(row=1, column=1, padx=5, pady=5)
@@ -52,7 +52,6 @@ class FFmpegGUI:
         self.container_var = tk.StringVar(value='mp4')
         self.container_option = ttk.Combobox(root, textvariable=self.container_var, values=['mp4', 'mov', 'mkv', 'flv'])
         self.container_option.grid(row=4, column=1, padx=5, pady=5, sticky='w')
-        self.container_option.bind("<<ComboboxSelected>>", self.update_output_extension)
         
         # 保留字幕选项
         self.subtitle_var = tk.BooleanVar()
@@ -84,135 +83,112 @@ class FFmpegGUI:
         self.check_env_button.grid(row=10, column=0, columnspan=3, padx=5, pady=5)
         
         # 初始化变量
+        self.input_files = []
         self.duration = 0
         self.is_running = False
         self.process = None
         self.start_time = None
+        self.current_file_index = 0
+        self.total_files = 0
         
     def browse_input(self):
-        filename = filedialog.askopenfilename()
-        if filename:
+        filenames = filedialog.askopenfilenames()
+        if filenames:
+            self.input_files = list(filenames)
             self.input_entry.delete(0, tk.END)
-            self.input_entry.insert(0, filename)
-            # 获取输入文件的时长
-            self.duration = self.get_duration(filename)
-            print(f"Duration: {self.duration} seconds")
-        
+            self.input_entry.insert(0, "; ".join(filenames))
+            # 计算总文件数量
+            self.total_files = len(self.input_files)
+            
     def browse_output(self):
-        # 获取当前选择的封装格式
-        container = self.container_var.get()
-        default_ext = '.' + container
-        # 定义所有支持的文件类型
-        filetypes = [('MP4 文件', '*.mp4'), ('MOV 文件', '*.mov'), ('MKV 文件', '*.mkv'), ('FLV 文件', '*.flv'), ('所有文件', '*.*')]
-        # 设置默认文件类型
-        filename = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=filetypes)
-        if filename:
-            # 如果用户没有手动添加扩展名，确保输出文件名有正确的扩展名
-            if not os.path.splitext(filename)[1]:
-                filename += default_ext
+        directory = filedialog.askdirectory()
+        if directory:
             self.output_entry.delete(0, tk.END)
-            self.output_entry.insert(0, filename)
-    
-    def update_output_extension(self, event=None):
-        # 当封装格式改变时，更新输出文件的扩展名
-        output_path = self.output_entry.get()
-        if output_path:
-            base, ext = os.path.splitext(output_path)
-            new_ext = '.' + self.container_var.get()
-            if ext != new_ext:
-                new_output_path = base + new_ext
-                self.output_entry.delete(0, tk.END)
-                self.output_entry.insert(0, new_output_path)
-    
-    def get_duration(self, filename):
-        try:
-            cmd = ['ffprobe', '-v', 'error', '-show_entries', 
-                   'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filename]
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            duration = float(result.stdout.strip())
-            return duration
-        except Exception as e:
-            print(f"Error getting duration: {e}")
-            return 0
-    
+            self.output_entry.insert(0, directory)
+            
     def start_encoding(self):
         if self.is_running:
             return
-        input_file = self.input_entry.get()
-        output_file = self.output_entry.get()
+        input_files = self.input_files
+        output_dir = self.output_entry.get()
         cq_value = self.cq_entry.get()
         encoder = self.encoder_var.get()
         container = self.container_var.get()
         keep_subtitles = self.subtitle_var.get()
         
-        if not os.path.isfile(input_file):
+        if not input_files:
             self.status_label.config(text="状态: 输入文件无效")
             return
-        if not output_file:
-            self.status_label.config(text="状态: 输出文件无效")
+        if not output_dir or not os.path.isdir(output_dir):
+            self.status_label.config(text="状态: 输出目录无效")
             return
         if not cq_value.isdigit():
             self.status_label.config(text="状态: CQ 值无效")
             return
         
-        # 检查输出文件是否存在
-        if os.path.exists(output_file):
-            overwrite = messagebox.askyesno("文件已存在", f"文件 '{output_file}' 已存在。是否要覆盖？")
-            if not overwrite:
-                self.status_label.config(text="状态: 操作已取消")
-                return
-        
         self.is_running = True
-        self.progress['value'] = 0
-        self.status_label.config(text="状态: 正在编码...")
         self.cancel_button.config(state='normal')
         self.start_button.config(state='disabled')
-        self.start_time = time.time()
+        self.current_file_index = 0
+        threading.Thread(target=self.encode_files, args=(input_files, output_dir, cq_value, encoder, container, keep_subtitles)).start()
         
-        # 构建 ffmpeg 命令，添加 '-y' 参数
-        cmd = [
-            'ffmpeg',
-            '-y',  # 自动覆盖已存在的文件
-            '-i', input_file,
-            '-c:v', encoder,
-            '-preset', 'p7',
-            '-rc', 'constqp',
-            '-cq', cq_value,
-            '-bf', '2',
-            '-rc-lookahead', '32',
-            '-spatial_aq', '1',
-            '-temporal_aq', '1',
-            '-c:a', 'copy',
-        ]
-        
-        # 处理字幕选项
-        if keep_subtitles:
-            if container == 'mp4':
-                # 对于 MP4，字幕需要转换为 mov_text 格式
-                cmd.extend(['-c:s', 'mov_text'])
-            else:
-                # 对于其他容器，可以直接复制字幕
-                cmd.extend(['-c:s', 'copy'])
-        else:
-            # 不保留字幕，禁用字幕流
-            cmd.extend(['-sn'])
-        
-        # 添加封装格式和输出文件
-        cmd.extend(['-f', container, output_file])
-        
-        # 在单独的线程中运行 ffmpeg
-        threading.Thread(target=self.run_ffmpeg, args=(cmd,)).start()
-    
-    def cancel_encoding(self):
-        if self.is_running and self.process:
-            self.process.terminate()
-            self.is_running = False
-            self.status_label.config(text="状态: 已取消")
+    def encode_files(self, input_files, output_dir, cq_value, encoder, container, keep_subtitles):
+        total_files = len(input_files)
+        for index, input_file in enumerate(input_files):
+            if not self.is_running:
+                break
+            self.current_file_index = index + 1
+            self.status_label.config(text=f"状态: 正在编码 {self.current_file_index}/{total_files}")
             self.progress['value'] = 0
             self.time_label.config(text="预计剩余时间: N/A")
-            self.cancel_button.config(state='disabled')
-            self.start_button.config(state='normal')
-    
+            self.start_time = time.time()
+            # 构建输出文件名
+            filename = os.path.basename(input_file)
+            name, _ = os.path.splitext(filename)
+            output_file = os.path.join(output_dir, f"{name}.{container}")
+            # 检查输出文件是否存在
+            if os.path.exists(output_file):
+                overwrite = messagebox.askyesno("文件已存在", f"文件 '{output_file}' 已存在。是否要覆盖？")
+                if not overwrite:
+                    self.status_label.config(text=f"状态: 已跳过 {self.current_file_index}/{total_files}")
+                    continue
+            # 获取文件时长
+            self.duration = self.get_duration(input_file)
+            # 构建 ffmpeg 命令
+            cmd = [
+                'ffmpeg',
+                '-y',  # 自动覆盖已存在的文件
+                '-i', input_file,
+                '-c:v', encoder,
+                '-preset', 'p7',
+                '-rc', 'constqp',
+                '-cq', cq_value,
+                '-bf', '2',
+                '-rc-lookahead', '32',
+                '-spatial_aq', '1',
+                '-temporal_aq', '1',
+                '-c:a', 'copy',
+            ]
+            # 处理字幕选项
+            if keep_subtitles:
+                if container == 'mp4':
+                    cmd.extend(['-c:s', 'mov_text'])
+                else:
+                    cmd.extend(['-c:s', 'copy'])
+            else:
+                cmd.extend(['-sn'])
+            # 添加封装格式和输出文件
+            cmd.extend(['-f', container, output_file])
+            # 运行 ffmpeg
+            self.run_ffmpeg(cmd)
+        self.is_running = False
+        self.cancel_button.config(state='disabled')
+        self.start_button.config(state='normal')
+        if self.is_running:
+            self.status_label.config(text="状态: 完成")
+        else:
+            self.status_label.config(text="状态: 已取消")
+            
     def run_ffmpeg(self, cmd):
         self.process = subprocess.Popen(cmd, stderr=subprocess.PIPE, universal_newlines=True)
         duration = self.duration
@@ -243,21 +219,30 @@ class FFmpegGUI:
                         self.time_label.config(text=f"预计剩余时间: {remaining_time_str}")
                     self.root.update_idletasks()
         self.process.wait()
-        self.is_running = False
-        if self.process.returncode == 0:
-            self.status_label.config(text="状态: 完成")
-            self.progress['value'] = 100
-            self.time_label.config(text="预计剩余时间: 00:00:00")
-        else:
-            if self.process.returncode < 0:
-                self.status_label.config(text="状态: 已取消")
-            else:
-                self.status_label.config(text="状态: 失败")
+        self.progress['value'] = 100
+        
+    def cancel_encoding(self):
+        if self.is_running:
+            self.is_running = False
+            if self.process:
+                self.process.terminate()
+            self.status_label.config(text="状态: 已取消")
             self.progress['value'] = 0
             self.time_label.config(text="预计剩余时间: N/A")
-        self.cancel_button.config(state='disabled')
-        self.start_button.config(state='normal')
-    
+            self.cancel_button.config(state='disabled')
+            self.start_button.config(state='normal')
+        
+    def get_duration(self, filename):
+        try:
+            cmd = ['ffprobe', '-v', 'error', '-show_entries', 
+                   'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filename]
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            duration = float(result.stdout.strip())
+            return duration
+        except Exception as e:
+            print(f"Error getting duration: {e}")
+            return 0
+        
     def check_environment(self):
         # 检查 ffmpeg 是否可用
         ffmpeg_available = False
@@ -346,7 +331,7 @@ class FFmpegGUI:
         except Exception as e:
             messagebox.showerror("安装失败", f"ffmpeg 安装失败：{e}")
             self.status_label.config(text="状态: ffmpeg 安装失败")
-    
+        
 if __name__ == '__main__':
     root = tk.Tk()
     app = FFmpegGUI(root)
