@@ -54,9 +54,14 @@ class FFmpegGUI:
         self.container_option.grid(row=4, column=1, padx=5, pady=5, sticky='w')
         self.container_option.bind("<<ComboboxSelected>>", self.update_output_extension)
         
+        # 保留字幕选项
+        self.subtitle_var = tk.BooleanVar()
+        self.subtitle_check = tk.Checkbutton(root, text="保留字幕", variable=self.subtitle_var)
+        self.subtitle_check.grid(row=5, column=1, padx=5, pady=5, sticky='w')
+        
         # 开始和取消按钮
         self.button_frame = tk.Frame(root)
-        self.button_frame.grid(row=5, column=0, columnspan=3, pady=5)
+        self.button_frame.grid(row=6, column=0, columnspan=3, pady=5)
         self.start_button = tk.Button(self.button_frame, text="开始", command=self.start_encoding)
         self.start_button.pack(side='left', padx=5)
         self.cancel_button = tk.Button(self.button_frame, text="取消", command=self.cancel_encoding, state='disabled')
@@ -64,19 +69,19 @@ class FFmpegGUI:
         
         # 进度条
         self.progress = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
-        self.progress.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
+        self.progress.grid(row=7, column=0, columnspan=3, padx=5, pady=5)
         
         # 预计剩余时间
         self.time_label = tk.Label(root, text="预计剩余时间: N/A")
-        self.time_label.grid(row=7, column=0, columnspan=3, padx=5, pady=5)
+        self.time_label.grid(row=8, column=0, columnspan=3, padx=5, pady=5)
         
         # 状态标签
         self.status_label = tk.Label(root, text="状态: 空闲")
-        self.status_label.grid(row=8, column=0, columnspan=3, padx=5, pady=5)
+        self.status_label.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
         
         # 环境检查按钮
         self.check_env_button = tk.Button(root, text="环境检查", command=self.check_environment)
-        self.check_env_button.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
+        self.check_env_button.grid(row=10, column=0, columnspan=3, padx=5, pady=5)
         
         # 初始化变量
         self.duration = 0
@@ -138,6 +143,7 @@ class FFmpegGUI:
         cq_value = self.cq_entry.get()
         encoder = self.encoder_var.get()
         container = self.container_var.get()
+        keep_subtitles = self.subtitle_var.get()
         
         if not os.path.isfile(input_file):
             self.status_label.config(text="状态: 输入文件无效")
@@ -177,9 +183,22 @@ class FFmpegGUI:
             '-spatial_aq', '1',
             '-temporal_aq', '1',
             '-c:a', 'copy',
-            '-f', container,
-            output_file
         ]
+        
+        # 处理字幕选项
+        if keep_subtitles:
+            if container == 'mp4':
+                # 对于 MP4，字幕需要转换为 mov_text 格式
+                cmd.extend(['-c:s', 'mov_text'])
+            else:
+                # 对于其他容器，可以直接复制字幕
+                cmd.extend(['-c:s', 'copy'])
+        else:
+            # 不保留字幕，禁用字幕流
+            cmd.extend(['-sn'])
+        
+        # 添加封装格式和输出文件
+        cmd.extend(['-f', container, output_file])
         
         # 在单独的线程中运行 ffmpeg
         threading.Thread(target=self.run_ffmpeg, args=(cmd,)).start()
