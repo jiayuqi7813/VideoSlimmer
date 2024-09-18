@@ -6,6 +6,10 @@ import threading
 import time
 import re
 import os
+import platform
+import urllib.request
+import zipfile
+import shutil
 
 class FFmpegGUI:
     def __init__(self, root):
@@ -276,7 +280,13 @@ class FFmpegGUI:
         # 提示信息
         info_text = ""
         if not ffmpeg_available:
-            info_text += "未找到 ffmpeg。请安装 ffmpeg 并将其添加到系统环境变量。\n"
+            info_text += "未找到 ffmpeg。"
+            # 询问用户是否自动下载安装 ffmpeg
+            install_ffmpeg = messagebox.askyesno("ffmpeg 未安装", "未检测到 ffmpeg。是否自动下载安装？")
+            if install_ffmpeg:
+                threading.Thread(target=self.install_ffmpeg).start()
+            else:
+                info_text += "请安装 ffmpeg 并将其添加到系统环境变量。\n"
         if not nvidia_gpu_available:
             info_text += "未检测到 NVIDIA 显卡。请确保已安装 NVIDIA 显卡和正确的驱动程序。\n"
         if info_text == "":
@@ -287,8 +297,37 @@ class FFmpegGUI:
         # 关闭按钮
         close_button = tk.Button(env_window, text="关闭", command=env_window.destroy)
         close_button.grid(row=3, column=0, columnspan=2, pady=5)
-
-
+    
+    def install_ffmpeg(self):
+        # 根据操作系统选择对应的 ffmpeg 下载链接
+        system = platform.system()
+        if system == 'Windows':
+            ffmpeg_url = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip'
+            zip_name = 'ffmpeg.zip'
+            install_path = os.path.join(os.getcwd(), 'ffmpeg')
+            bin_path = os.path.join(install_path, 'bin')
+        else:
+            messagebox.showinfo("暂不支持", "自动安装 ffmpeg 的功能目前仅支持 Windows 系统。")
+            return
+        
+        try:
+            # 下载 ffmpeg
+            self.status_label.config(text="状态: 正在下载 ffmpeg...")
+            urllib.request.urlretrieve(ffmpeg_url, zip_name)
+            # 解压缩
+            self.status_label.config(text="状态: 正在安装 ffmpeg...")
+            with zipfile.ZipFile(zip_name, 'r') as zip_ref:
+                zip_ref.extractall(install_path)
+            # 删除压缩文件
+            os.remove(zip_name)
+            # 更新系统环境变量
+            os.environ['PATH'] += os.pathsep + bin_path
+            messagebox.showinfo("安装完成", "ffmpeg 已成功安装。请重新启动程序以确保更改生效。")
+            self.status_label.config(text="状态: ffmpeg 安装完成")
+        except Exception as e:
+            messagebox.showerror("安装失败", f"ffmpeg 安装失败：{e}")
+            self.status_label.config(text="状态: ffmpeg 安装失败")
+    
 if __name__ == '__main__':
     root = tk.Tk()
     app = FFmpegGUI(root)
