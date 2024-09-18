@@ -33,14 +33,14 @@ class FFmpegGUI:
         self.output_button.grid(row=1, column=2, padx=5, pady=5)
         
         # 编码器选项
-        self.encoder_label = tk.Label(root, text="选择编码器:")
+        self.encoder_label = tk.Label(root, text="选择视频编码器:")
         self.encoder_label.grid(row=2, column=0, padx=5, pady=5, sticky='e')
         self.encoder_var = tk.StringVar(value='av1_nvenc')
         self.encoder_option = ttk.Combobox(root, textvariable=self.encoder_var, values=['av1_nvenc', 'h264_nvenc', 'hevc_nvenc'])
         self.encoder_option.grid(row=2, column=1, padx=5, pady=5, sticky='w')
         
         # CQ 值
-        self.cq_label = tk.Label(root, text="CQ (恒定质量):")
+        self.cq_label = tk.Label(root, text="视频 CQ (恒定质量):")
         self.cq_label.grid(row=3, column=0, padx=5, pady=5, sticky='e')
         self.cq_entry = tk.Entry(root, width=10)
         self.cq_entry.insert(0, "20")
@@ -58,9 +58,37 @@ class FFmpegGUI:
         self.subtitle_check = tk.Checkbutton(root, text="保留字幕", variable=self.subtitle_var)
         self.subtitle_check.grid(row=5, column=1, padx=5, pady=5, sticky='w')
         
+        # 音频编码器选项
+        self.audio_encoder_label = tk.Label(root, text="选择音频编码器:")
+        self.audio_encoder_label.grid(row=6, column=0, padx=5, pady=5, sticky='e')
+        self.audio_encoder_var = tk.StringVar(value='copy')
+        self.audio_encoder_option = ttk.Combobox(root, textvariable=self.audio_encoder_var, values=['copy', 'aac', 'mp3', 'libopus'])
+        self.audio_encoder_option.grid(row=6, column=1, padx=5, pady=5, sticky='w')
+        
+        # 音频比特率
+        self.audio_bitrate_label = tk.Label(root, text="音频比特率 (kbps):")
+        self.audio_bitrate_label.grid(row=7, column=0, padx=5, pady=5, sticky='e')
+        self.audio_bitrate_entry = tk.Entry(root, width=10)
+        self.audio_bitrate_entry.insert(0, "128")
+        self.audio_bitrate_entry.grid(row=7, column=1, padx=5, pady=5, sticky='w')
+        
+        # 音频采样率
+        self.audio_sample_rate_label = tk.Label(root, text="音频采样率 (Hz):")
+        self.audio_sample_rate_label.grid(row=8, column=0, padx=5, pady=5, sticky='e')
+        self.audio_sample_rate_entry = tk.Entry(root, width=10)
+        self.audio_sample_rate_entry.insert(0, "44100")
+        self.audio_sample_rate_entry.grid(row=8, column=1, padx=5, pady=5, sticky='w')
+        
+        # 音频声道数
+        self.audio_channels_label = tk.Label(root, text="音频声道数:")
+        self.audio_channels_label.grid(row=9, column=0, padx=5, pady=5, sticky='e')
+        self.audio_channels_entry = tk.Entry(root, width=10)
+        self.audio_channels_entry.insert(0, "2")
+        self.audio_channels_entry.grid(row=9, column=1, padx=5, pady=5, sticky='w')
+        
         # 开始和取消按钮
         self.button_frame = tk.Frame(root)
-        self.button_frame.grid(row=6, column=0, columnspan=3, pady=5)
+        self.button_frame.grid(row=10, column=0, columnspan=3, pady=5)
         self.start_button = tk.Button(self.button_frame, text="开始", command=self.start_encoding)
         self.start_button.pack(side='left', padx=5)
         self.cancel_button = tk.Button(self.button_frame, text="取消", command=self.cancel_encoding, state='disabled')
@@ -68,19 +96,19 @@ class FFmpegGUI:
         
         # 进度条
         self.progress = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
-        self.progress.grid(row=7, column=0, columnspan=3, padx=5, pady=5)
+        self.progress.grid(row=11, column=0, columnspan=3, padx=5, pady=5)
         
         # 预计剩余时间
         self.time_label = tk.Label(root, text="预计剩余时间: N/A")
-        self.time_label.grid(row=8, column=0, columnspan=3, padx=5, pady=5)
+        self.time_label.grid(row=12, column=0, columnspan=3, padx=5, pady=5)
         
         # 状态标签
         self.status_label = tk.Label(root, text="状态: 空闲")
-        self.status_label.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
+        self.status_label.grid(row=13, column=0, columnspan=3, padx=5, pady=5)
         
         # 环境检查按钮
         self.check_env_button = tk.Button(root, text="环境检查", command=self.check_environment)
-        self.check_env_button.grid(row=10, column=0, columnspan=3, padx=5, pady=5)
+        self.check_env_button.grid(row=14, column=0, columnspan=3, padx=5, pady=5)
         
         # 初始化变量
         self.input_files = []
@@ -115,6 +143,10 @@ class FFmpegGUI:
         encoder = self.encoder_var.get()
         container = self.container_var.get()
         keep_subtitles = self.subtitle_var.get()
+        audio_encoder = self.audio_encoder_var.get()
+        audio_bitrate = self.audio_bitrate_entry.get()
+        audio_sample_rate = self.audio_sample_rate_entry.get()
+        audio_channels = self.audio_channels_entry.get()
         
         if not input_files:
             self.status_label.config(text="状态: 输入文件无效")
@@ -123,16 +155,29 @@ class FFmpegGUI:
             self.status_label.config(text="状态: 输出目录无效")
             return
         if not cq_value.isdigit():
-            self.status_label.config(text="状态: CQ 值无效")
+            self.status_label.config(text="状态: 视频 CQ 值无效")
+            return
+        if audio_encoder != 'copy' and not audio_bitrate.isdigit():
+            self.status_label.config(text="状态: 音频比特率无效")
+            return
+        if audio_encoder != 'copy' and not audio_sample_rate.isdigit():
+            self.status_label.config(text="状态: 音频采样率无效")
+            return
+        if audio_encoder != 'copy' and not audio_channels.isdigit():
+            self.status_label.config(text="状态: 音频声道数无效")
             return
         
         self.is_running = True
         self.cancel_button.config(state='normal')
         self.start_button.config(state='disabled')
         self.current_file_index = 0
-        threading.Thread(target=self.encode_files, args=(input_files, output_dir, cq_value, encoder, container, keep_subtitles)).start()
+        threading.Thread(target=self.encode_files, args=(
+            input_files, output_dir, cq_value, encoder, container, keep_subtitles,
+            audio_encoder, audio_bitrate, audio_sample_rate, audio_channels
+        )).start()
         
-    def encode_files(self, input_files, output_dir, cq_value, encoder, container, keep_subtitles):
+    def encode_files(self, input_files, output_dir, cq_value, encoder, container, keep_subtitles,
+                     audio_encoder, audio_bitrate, audio_sample_rate, audio_channels):
         total_files = len(input_files)
         for index, input_file in enumerate(input_files):
             if not self.is_running:
@@ -167,8 +212,15 @@ class FFmpegGUI:
                 '-rc-lookahead', '32',
                 '-spatial_aq', '1',
                 '-temporal_aq', '1',
-                '-c:a', 'copy',
             ]
+            # 处理音频编码器
+            if audio_encoder == 'copy':
+                cmd.extend(['-c:a', 'copy'])
+            else:
+                cmd.extend(['-c:a', audio_encoder])
+                cmd.extend(['-b:a', f'{audio_bitrate}k'])
+                cmd.extend(['-ar', audio_sample_rate])
+                cmd.extend(['-ac', audio_channels])
             # 处理字幕选项
             if keep_subtitles:
                 if container == 'mp4':
