@@ -10,14 +10,18 @@ import platform
 import urllib.request
 import zipfile
 import shutil
+import locale
 import json
+import gettext
 
 class FFmpegGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("VideoSlimmer")
+        # 初始化国际化
+        self.init_i18n()
         
-        # 初始化变量
+         # 初始化变量
         self.input_files = []
         self.duration = 0
         self.is_running = False
@@ -25,110 +29,191 @@ class FFmpegGUI:
         self.start_time = None
         self.current_file_index = 0
         self.total_files = 0
-        self.presets = self.load_presets()  # 确保在调用 get_presets() 之前初始化
+        self.presets = self.load_presets()
         
+          # 创建菜单栏
+        self.create_menu()
+
         # 输入文件
-        self.input_label = tk.Label(root, text="输入文件:")
+        self.input_label = tk.Label(root, text=_("输入文件:"))
         self.input_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
         self.input_entry = tk.Entry(root, width=50)
         self.input_entry.grid(row=0, column=1, padx=5, pady=5)
-        self.input_button = tk.Button(root, text="浏览", command=self.browse_input)
+        self.input_button = tk.Button(root, text=_("浏览"), command=self.browse_input)
         self.input_button.grid(row=0, column=2, padx=5, pady=5)
-        
+
         # 输出目录
-        self.output_label = tk.Label(root, text="输出目录:")
+        self.output_label = tk.Label(root, text=_("输出目录:"))
         self.output_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
         self.output_entry = tk.Entry(root, width=50)
         self.output_entry.grid(row=1, column=1, padx=5, pady=5)
-        self.output_button = tk.Button(root, text="浏览", command=self.browse_output)
+        self.output_button = tk.Button(root, text=_("浏览"), command=self.browse_output)
         self.output_button.grid(row=1, column=2, padx=5, pady=5)
-        
+
         # 预设选项
-        self.preset_label = tk.Label(root, text="选择预设:")
+        self.preset_label = tk.Label(root, text=_("选择预设:"))
         self.preset_label.grid(row=2, column=0, padx=5, pady=5, sticky='e')
-        self.preset_var = tk.StringVar(value='自定义')
+        self.preset_var = tk.StringVar(value=_('自定义'))
         self.preset_option = ttk.Combobox(root, textvariable=self.preset_var, values=self.get_presets())
         self.preset_option.grid(row=2, column=1, padx=5, pady=5, sticky='w')
         self.preset_option.bind("<<ComboboxSelected>>", self.apply_preset)
-        
+
         # 编码器选项
-        self.encoder_label = tk.Label(root, text="选择视频编码器:")
+        self.encoder_label = tk.Label(root, text=_("选择视频编码器:"))
         self.encoder_label.grid(row=3, column=0, padx=5, pady=5, sticky='e')
         self.encoder_var = tk.StringVar(value='av1_nvenc')
         self.encoder_option = ttk.Combobox(root, textvariable=self.encoder_var, values=['av1_nvenc', 'h264_nvenc', 'hevc_nvenc'])
         self.encoder_option.grid(row=3, column=1, padx=5, pady=5, sticky='w')
-        
+
         # CQ 值
-        self.cq_label = tk.Label(root, text="视频 CQ (恒定质量):")
+        self.cq_label = tk.Label(root, text=_("视频 CQ (恒定质量):"))
         self.cq_label.grid(row=4, column=0, padx=5, pady=5, sticky='e')
         self.cq_entry = tk.Entry(root, width=10)
         self.cq_entry.insert(0, "20")
         self.cq_entry.grid(row=4, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 封装格式选项
-        self.container_label = tk.Label(root, text="选择封装格式:")
+        self.container_label = tk.Label(root, text=_("选择封装格式:"))
         self.container_label.grid(row=5, column=0, padx=5, pady=5, sticky='e')
         self.container_var = tk.StringVar(value='mp4')
         self.container_option = ttk.Combobox(root, textvariable=self.container_var, values=['mp4', 'mov', 'mkv', 'flv'])
         self.container_option.grid(row=5, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 保留字幕选项
         self.subtitle_var = tk.BooleanVar()
-        self.subtitle_check = tk.Checkbutton(root, text="保留字幕", variable=self.subtitle_var)
+        self.subtitle_check = tk.Checkbutton(root, text=_("保留字幕"), variable=self.subtitle_var)
         self.subtitle_check.grid(row=6, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 音频编码器选项
-        self.audio_encoder_label = tk.Label(root, text="选择音频编码器:")
+        self.audio_encoder_label = tk.Label(root, text=_("选择音频编码器:"))
         self.audio_encoder_label.grid(row=7, column=0, padx=5, pady=5, sticky='e')
         self.audio_encoder_var = tk.StringVar(value='copy')
         self.audio_encoder_option = ttk.Combobox(root, textvariable=self.audio_encoder_var, values=['copy', 'aac', 'mp3', 'libopus'])
         self.audio_encoder_option.grid(row=7, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 音频比特率
-        self.audio_bitrate_label = tk.Label(root, text="音频比特率 (kbps):")
+        self.audio_bitrate_label = tk.Label(root, text=_("音频比特率 (kbps):"))
         self.audio_bitrate_label.grid(row=8, column=0, padx=5, pady=5, sticky='e')
         self.audio_bitrate_entry = tk.Entry(root, width=10)
         self.audio_bitrate_entry.insert(0, "128")
         self.audio_bitrate_entry.grid(row=8, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 音频采样率
-        self.audio_sample_rate_label = tk.Label(root, text="音频采样率 (Hz):")
+        self.audio_sample_rate_label = tk.Label(root, text=_("音频采样率 (Hz):"))
         self.audio_sample_rate_label.grid(row=9, column=0, padx=5, pady=5, sticky='e')
         self.audio_sample_rate_entry = tk.Entry(root, width=10)
         self.audio_sample_rate_entry.insert(0, "44100")
         self.audio_sample_rate_entry.grid(row=9, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 音频声道数
-        self.audio_channels_label = tk.Label(root, text="音频声道数:")
+        self.audio_channels_label = tk.Label(root, text=_("音频声道数:"))
         self.audio_channels_label.grid(row=10, column=0, padx=5, pady=5, sticky='e')
         self.audio_channels_entry = tk.Entry(root, width=10)
         self.audio_channels_entry.insert(0, "2")
         self.audio_channels_entry.grid(row=10, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 开始和取消按钮
         self.button_frame = tk.Frame(root)
         self.button_frame.grid(row=11, column=0, columnspan=3, pady=5)
-        self.start_button = tk.Button(self.button_frame, text="开始", command=self.start_encoding)
+        self.start_button = tk.Button(self.button_frame, text=_("开始"), command=self.start_encoding)
         self.start_button.pack(side='left', padx=5)
-        self.cancel_button = tk.Button(self.button_frame, text="取消", command=self.cancel_encoding, state='disabled')
+        self.cancel_button = tk.Button(self.button_frame, text=_("取消"), command=self.cancel_encoding, state='disabled')
         self.cancel_button.pack(side='left', padx=5)
-        
+
         # 进度条
         self.progress = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
         self.progress.grid(row=12, column=0, columnspan=3, padx=5, pady=5)
-        
+
         # 预计剩余时间
-        self.time_label = tk.Label(root, text="预计剩余时间: N/A")
+        self.time_label = tk.Label(root, text=_("预计剩余时间: N/A"))
         self.time_label.grid(row=13, column=0, columnspan=3, padx=5, pady=5)
-        
+
         # 状态标签
-        self.status_label = tk.Label(root, text="状态: 空闲")
+        self.status_label = tk.Label(root, text=_("状态: 空闲"))
         self.status_label.grid(row=14, column=0, columnspan=3, padx=5, pady=5)
+
         
-        # 环境检查按钮
-        self.check_env_button = tk.Button(root, text="环境检查", command=self.check_environment)
-        self.check_env_button.grid(row=15, column=0, columnspan=3, padx=5, pady=5)
-        
+    def init_i18n(self):
+        # 初始化国际化
+        lang = locale.getdefaultlocale()[0]
+        if lang is None:
+            lang = 'en_US'
+        lang = lang.split('_')[0]
+        locales_dir = os.path.join(os.path.dirname(__file__), 'locales')
+        self.trans = gettext.translation('app', localedir=locales_dir, languages=[lang], fallback=True)
+        self.trans.install()
+        global _
+        _ = self.trans.gettext
+
+    def create_menu(self):
+        # 创建菜单栏
+        self.menu_bar = tk.Menu(self.root)
+
+        # 文件菜单
+        file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        file_menu.add_command(label=_("打开输入文件"), command=self.browse_input)
+        file_menu.add_command(label=_("选择输出目录"), command=self.browse_output)
+        file_menu.add_separator()
+        file_menu.add_command(label=_("退出"), command=self.root.quit)
+        self.menu_bar.add_cascade(label=_("文件"), menu=file_menu)
+
+        # 设置菜单
+        settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        settings_menu.add_command(label=_("环境检查"), command=self.check_environment)
+        self.menu_bar.add_cascade(label=_("设置"), menu=settings_menu)
+
+        # 语言菜单
+        language_menu = tk.Menu(self.menu_bar, tearoff=0)
+        language_menu.add_command(label="English", command=lambda: self.change_language('en'))
+        language_menu.add_command(label="中文", command=lambda: self.change_language('zh'))
+        self.menu_bar.add_cascade(label=_("语言"), menu=language_menu)
+
+        # 帮助菜单
+        help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        help_menu.add_command(label=_("关于"), command=self.show_about)
+        self.menu_bar.add_cascade(label=_("帮助"), menu=help_menu)
+
+        self.root.config(menu=self.menu_bar)
+
+    def change_language(self, lang_code):
+        # 更改语言
+        locales_dir = os.path.join(os.path.dirname(__file__), 'locales')
+        self.trans = gettext.translation('app', localedir=locales_dir, languages=[lang_code], fallback=True)
+        self.trans.install()
+        global _
+        _ = self.trans.gettext
+        # 重新加载界面文本
+        self.reload_ui_text()
+
+    def reload_ui_text(self):
+        # 重新设置界面上的文本
+        self.root.title(_("FFmpeg GUI"))
+        self.input_label.config(text=_("输入文件:"))
+        self.input_button.config(text=_("浏览"))
+        self.output_label.config(text=_("输出目录:"))
+        self.output_button.config(text=_("浏览"))
+        self.preset_label.config(text=_("选择预设:"))
+        self.preset_option['values'] = self.get_presets()
+        self.encoder_label.config(text=_("选择视频编码器:"))
+        self.cq_label.config(text=_("视频 CQ (恒定质量):"))
+        self.container_label.config(text=_("选择封装格式:"))
+        self.subtitle_check.config(text=_("保留字幕"))
+        self.audio_encoder_label.config(text=_("选择音频编码器:"))
+        self.audio_bitrate_label.config(text=_("音频比特率 (kbps):"))
+        self.audio_sample_rate_label.config(text=_("音频采样率 (Hz):"))
+        self.audio_channels_label.config(text=_("音频声道数:"))
+        self.start_button.config(text=_("开始"))
+        self.cancel_button.config(text=_("取消"))
+        self.time_label.config(text=_("预计剩余时间: N/A"))
+        self.status_label.config(text=_("状态: 空闲"))
+        # 更新菜单栏
+        self.create_menu()
+
+    def show_about(self):
+        # 显示关于对话框
+        messagebox.showinfo(_("关于"), _("FFmpeg GUI\n版本: 1.0\n作者: OpenAI Assistant"))
+
+
     def browse_input(self):
         filenames = filedialog.askopenfilenames()
         if filenames:

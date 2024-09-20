@@ -1,0 +1,135 @@
+# Chinese translations for PACKAGE package.
+# Copyright (C) 2024 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# snowywar <snowywar@snowywardemacbook-pro.local>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-09-20 16:32+0800\n"
+"PO-Revision-Date: 2024-09-20 16:33+0800\n"
+"Last-Translator: snowywar <snowywar@snowywardemacbook-pro.local>\n"
+"Language-Team: Chinese\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app.py:36 app.py:189
+msgid "输入文件:"
+msgstr "输入文件:"
+
+#: app.py:40 app.py:48 app.py:190 app.py:192
+msgid "浏览"
+msgstr "浏览"
+
+#: app.py:44 app.py:191
+msgid "输出目录:"
+msgstr "输出目录:"
+
+#: app.py:52 app.py:193
+msgid "选择预设:"
+msgstr "选择预设:"
+
+#: app.py:54
+msgid "自定义"
+msgstr "自定义"
+
+#: app.py:60 app.py:195
+msgid "选择视频编码器:"
+msgstr "选择视频编码器:"
+
+#: app.py:67 app.py:196
+msgid "视频 CQ (恒定质量):"
+msgstr "视频 CQ (恒定质量):"
+
+#: app.py:74 app.py:197
+msgid "选择封装格式:"
+msgstr "选择封装格式:"
+
+#: app.py:82 app.py:198
+msgid "保留字幕"
+msgstr "保留字幕"
+
+#: app.py:86 app.py:199
+msgid "选择音频编码器:"
+msgstr "选择音频编码器:"
+
+#: app.py:93 app.py:200
+msgid "音频比特率 (kbps):"
+msgstr "音频比特率 (kbps):"
+
+#: app.py:100 app.py:201
+msgid "音频采样率 (Hz):"
+msgstr "音频采样率 (Hz):"
+
+#: app.py:107 app.py:202
+msgid "音频声道数:"
+msgstr "音频声道数:"
+
+#: app.py:116 app.py:203
+msgid "开始"
+msgstr "开始"
+
+#: app.py:118 app.py:204
+msgid "取消"
+msgstr "取消"
+
+#: app.py:126 app.py:205
+msgid "预计剩余时间: N/A"
+msgstr "预计剩余时间: N/A"
+
+#: app.py:130 app.py:206
+msgid "状态: 空闲"
+msgstr "状态: 空闲"
+
+#: app.py:152
+msgid "打开输入文件"
+msgstr "打开输入文件"
+
+#: app.py:153
+msgid "选择输出目录"
+msgstr "选择输出目录"
+
+#: app.py:155
+msgid "退出"
+msgstr "退出"
+
+#: app.py:156
+msgid "文件"
+msgstr "文件"
+
+#: app.py:160
+msgid "环境检查"
+msgstr "环境检查"
+
+#: app.py:161
+msgid "设置"
+msgstr "设置"
+
+#: app.py:167
+msgid "语言"
+msgstr "语言"
+
+#: app.py:171 app.py:212
+msgid "关于"
+msgstr "关于"
+
+#: app.py:172
+msgid "帮助"
+msgstr "帮助"
+
+#: app.py:188
+msgid "FFmpeg GUI"
+msgstr "VideoSlimmer"
+
+#: app.py:212
+msgid ""
+"FFmpeg GUI\n"
+"版本: 1.0\n"
+"作者: OpenAI Assistant"
+msgstr ""
+"FFmpeg GUI\n"
+"版本: 1.0\n"
+"作者: OpenAI Assistant"
