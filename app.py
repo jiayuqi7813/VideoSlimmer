@@ -21,7 +21,7 @@ class FFmpegGUI:
         # 初始化国际化
         self.init_i18n()
         
-         # 初始化变量
+        # 初始化变量
         self.input_files = []
         self.duration = 0
         self.is_running = False
@@ -31,7 +31,7 @@ class FFmpegGUI:
         self.total_files = 0
         self.presets = self.load_presets()
         
-          # 创建菜单栏
+        # 创建菜单栏
         self.create_menu()
 
         # 输入文件
@@ -62,7 +62,7 @@ class FFmpegGUI:
         self.encoder_label = tk.Label(root, text=_("选择视频编码器:"))
         self.encoder_label.grid(row=3, column=0, padx=5, pady=5, sticky='e')
         self.encoder_var = tk.StringVar(value='av1_nvenc')
-        self.encoder_option = ttk.Combobox(root, textvariable=self.encoder_var, values=['av1_nvenc', 'h264_nvenc', 'hevc_nvenc'])
+        self.encoder_option = ttk.Combobox(root, textvariable=self.encoder_var, values=['av1_nvenc', 'h264_nvenc', 'hevc_nvenc', 'libx264', 'libx265'])
         self.encoder_option.grid(row=3, column=1, padx=5, pady=5, sticky='w')
 
         # CQ 值
@@ -443,53 +443,51 @@ class FFmpegGUI:
             ffmpeg_available = True
         except Exception:
             ffmpeg_available = False
-        
+
         # 检查是否存在 NVIDIA 显卡
         nvidia_gpu_available = False
-        try:
-            result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
-            if "NVIDIA-SMI" in result.stdout:
-                nvidia_gpu_available = True
-        except Exception:
+        if platform.system() == 'Linux':
+            try:
+                result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
+                if "NVIDIA-SMI" in result.stdout:
+                    nvidia_gpu_available = True
+            except Exception:
+                nvidia_gpu_available = False
+        elif platform.system() == 'Darwin':
+            # macOS 下默认不支持 NVIDIA GPU，假定无 NVIDIA GPU 支持
             nvidia_gpu_available = False
-        
+
         # 创建新的窗口显示结果
         env_window = tk.Toplevel(self.root)
         env_window.title("环境检查结果")
-        
+
         # 使用 Unicode 字符显示对号和叉号
-        check_mark = '\u2714'  # ✔
-        cross_mark = '\u2718'  # ✘
-        
+        check_mark = '✔'  # ✔
+        cross_mark = '✘'  # ✘
+
         # ffmpeg 检查结果
         ffmpeg_label = tk.Label(env_window, text="ffmpeg 可用性：")
         ffmpeg_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
         ffmpeg_result = tk.Label(env_window, text=check_mark if ffmpeg_available else cross_mark, fg='green' if ffmpeg_available else 'red')
         ffmpeg_result.grid(row=0, column=1, padx=5, pady=5, sticky='w')
-        
+
         # NVIDIA 显卡检查结果
         nvidia_label = tk.Label(env_window, text="NVIDIA 显卡：")
         nvidia_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
         nvidia_result = tk.Label(env_window, text=check_mark if nvidia_gpu_available else cross_mark, fg='green' if nvidia_gpu_available else 'red')
         nvidia_result.grid(row=1, column=1, padx=5, pady=5, sticky='w')
-        
+
         # 提示信息
         info_text = ""
         if not ffmpeg_available:
-            info_text += "未找到 ffmpeg。"
-            # 询问用户是否自动下载安装 ffmpeg
-            install_ffmpeg = messagebox.askyesno("ffmpeg 未安装", "未检测到 ffmpeg。是否自动下载安装？")
-            if install_ffmpeg:
-                threading.Thread(target=self.install_ffmpeg).start()
-            else:
-                info_text += "请安装 ffmpeg 并将其添加到系统环境变量。\n"
+            info_text += "未找到 ffmpeg，请安装 ffmpeg 并将其添加到系统环境变量。\n"
         if not nvidia_gpu_available:
             info_text += "未检测到 NVIDIA 显卡。请确保已安装 NVIDIA 显卡和正确的驱动程序。\n"
         if info_text == "":
             info_text = "您的环境已正确配置。"
         info_label = tk.Label(env_window, text=info_text)
         info_label.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
-        
+
         # 关闭按钮
         close_button = tk.Button(env_window, text="关闭", command=env_window.destroy)
         close_button.grid(row=3, column=0, columnspan=2, pady=5)

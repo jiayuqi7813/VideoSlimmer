@@ -14,8 +14,8 @@
 💻 硬件加速：利用 NVIDIA 显卡进行硬件加速，获得最佳性能。
 
 ## 系统要求
-* 操作系统：Windows 
-* Python：3.x
+* 操作系统：Windows 、Linux 或 macOS
+* Python：3.12+
 * FFmpeg：已安装并添加到系统 PATH 中
 * NVIDIA 显卡：为了获得最佳性能，需要支持硬件编码的 NVIDIA 显卡
 ## 安装
@@ -31,6 +31,14 @@ git clone https://github.com/yourusername/easy-video-compressor.git
 2. 检查 NVIDIA 显卡和驱动
 
 确保您的系统配备 NVIDIA 显卡，并已安装最新的显卡驱动程序。
+
+3. mac 安装依赖项
+
+```bash
+brew install python-tk@3.12
+```
+
+mac python3.12版本以下会存在窗口显示问题。
 
 ## 使用方法
 1. 运行程序
